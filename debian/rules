@@ -1,0 +1,102 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=sslcrtsrv
+
+# debian/changelog's version and src/sslcrtsrv/__init__.py's __version__
+# (the single source of truth also used at runtime - see client.py's
+# `update` command) are two independently-maintained numbers by design: the
+# debian revision suffix (the "-1" in "0.1.0-1") is allowed to bump on its
+# own for packaging-only fixes with no code change. But their *upstream*
+# part is supposed to track each other, and nothing enforces that
+# automatically - catch the easy mistake (bumped __version__, forgot to run
+# `dch`) here, at build time, instead of silently shipping a .deb stamped
+# with a stale version forever.
+CHANGELOG_UPSTREAM_VERSION := $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]*$$//')
+PACKAGE_VERSION := $(shell python3 -c "import sys; sys.path.insert(0, 'src'); import sslcrtsrv; print(sslcrtsrv.__version__)")
+ifneq ($(CHANGELOG_UPSTREAM_VERSION),$(PACKAGE_VERSION))
+$(error debian/changelog's upstream version ($(CHANGELOG_UPSTREAM_VERSION)) does not match \
+sslcrtsrv.__version__ ($(PACKAGE_VERSION)) - bump src/sslcrtsrv/__init__.py to match, or run \
+'dch -v $(PACKAGE_VERSION)-1 "..."' to add a matching changelog entry, before building)
+endif
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+# With two binary packages and none named python3-<name>, this dh-python's
+# pybuild "distutils" plugin ignores --dest-dir and always installs to
+# debian/python3-$PYBUILD_NAME (versioned dist-packages path, e.g.
+# usr/lib/python3.9/dist-packages), not the debian/tmp + unversioned
+# usr/lib/python3/dist-packages layout dh_install's *.install files expect.
+# Run it, then normalize the tree into the shape dh_install wants.
+#
+# pybuild --install only ever *adds* to debian/python3-$(PYBUILD_NAME) - it
+# never removes a pre-existing sslcrtsrv-<oldversion>.egg-info left over from
+# an earlier build of this tree that wasn't cleaned first (`debian/rules
+# clean`/a fresh checkout between every build isn't guaranteed, e.g. across
+# sessions in a persistent dev container). Each egg-info directory is named
+# after its own version, so dpkg's usual "remove files the new package
+# doesn't ship" upgrade logic never removes an old one either - left alone,
+# every version ever built here accumulates side by side and ships together
+# in the .deb, letting importlib.metadata/pkg_resources resolve `sslcrtsrv`
+# to whichever stale version happens to sort first and silently miss any
+# entry point (e.g. scs-dbmigrate) added since. Force a clean target
+# directory on every build instead of relying on that discipline.
+override_dh_auto_install:
+	rm -rf debian/python3-$(PYBUILD_NAME)
+	pybuild --install
+	mkdir -p debian/tmp
+	cp -a debian/python3-$(PYBUILD_NAME)/. debian/tmp/.
+	mkdir -p debian/tmp/usr/lib/python3/dist-packages
+	cp -a debian/tmp/usr/lib/python3.*/dist-packages/. debian/tmp/usr/lib/python3/dist-packages/.
+	rm -rf debian/tmp/usr/lib/python3.[0-9]*
+	# dh_python3 (later in the sequence) owns bytecode compilation via its own
+	# postinst triggers - these are setup.py's own build-time .pyc, for the
+	# single interpreter ABI that happened to run it, not meant to be shipped.
+	find debian/tmp -name __pycache__ -exec rm -rf {} +
+	# PACKAGE_TYPE marker: lets client.py's `update` command tell what kind
+	# of package it's actually running as (see common/client_utils.py's
+	# detect_package_type()) and combine that with client_config.json's
+	# `update_package_base` into the right catalog name to request, instead
+	# of needing --update-package spelled out every time. Never present in
+	# the git source tree - build-tarballs.py writes its own "tarball" value
+	# into that archive the same way.
+	echo deb > debian/tmp/usr/lib/python3/dist-packages/sslcrtsrv/PACKAGE_TYPE
+
+# Ship sslcrtsrv-server.service and sslcrtsrv-acme-server.service (the
+# latter from debian/sslcrtsrv-server.sslcrtsrv-acme-server.service - the
+# dh_installsystemd naming convention for a second unit within one binary
+# package), so `systemctl enable` works for either once the admin has run
+# `scs-server init`, but don't auto-enable or start either one on install -
+# there is no server_config.json yet at that point (and acme_enabled
+# defaults to unset even once one exists).
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start
+
+# tests/ (see tests/test_acme_concurrency.py) is a real, runnable suite, but
+# deliberately kept out of the package build regardless: it needs runtime
+# deps (sqlalchemy, josepy, cryptography) that are declared as binary
+# package Depends, not Build-Depends, since they're not needed to build,
+# only to run - the build environment doesn't have them. Run it manually
+# instead: `python3 -m unittest discover -s tests -v` with the project
+# installed (or PYTHONPATH=src set).
+override_dh_auto_test:
+
+# dh_python3's ${python3:Depends} guessing is a static source scan for
+# import statements - it can't tell that client.py's `import rich` is
+# deliberately inside a try/except to make it optional (setup.cfg's
+# install_requires/extras_require split says otherwise), so left at its
+# default it silently re-adds python3-rich as a hard Depends on
+# sslcrtsrv-client no matter what debian/control says. --no-guessing-deps
+# for that package only: cryptography is already a manually-listed Depends
+# there, so nothing real is lost.
+#
+# sslcrtsrv-server needs the same treatment now that common/acme_jose.py
+# has its own try/except `import josepy` (setup.cfg's `acme` extra, only
+# needed to run the optional scs-acme-server) - left at its default,
+# guessing would just as silently promote python3-josepy to a hard Depends
+# here too, same failure mode as the rich case above. rich/sqlalchemy/
+# alembic/textual/pytz are all already manually listed as hard Depends in
+# debian/control regardless of guessing, so nothing is lost by disabling it.
+override_dh_python3:
+	dh_python3 -psslcrtsrv-server --no-guessing-deps
+	dh_python3 -psslcrtsrv-client --no-guessing-deps

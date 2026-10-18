@@ -1,0 +1,254 @@
+# Byte-compiled / optimized / DLL files
+__pycache__
+__pycache__/*
+*.py[cod]
+*$py.class
+src/testdata/*pem
+src/testdata/*key
+src/__pycache
+src/__pycache_/*
+src/crtrequest.log
+crtrequest.log
+notes.md
+# Real secrets config - only crtrequest_config.json.dist (the template) should ever be tracked
+src/crtrequest_config.py
+src/crtrequest_config.json
+crtrequest_config.py
+crtrequest_config.json
+# C extensions
+*.so
+.Python
+src.sqla/*
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  - https://pyinstaller.readthedocs.io/en/latest/usage.html#built-in-hidden-imports
+#  - https://github.com/pyinstaller/pyinstaller/issues/1113
+#  - https://github.com/pyinstaller/pyinstaller/issues/2078
+#  - https://github.com/pyinstaller/pyinstaller/issues/2079
+#  - https://github.com/pyinstaller/pyinstaller/issues/2080
+#  - https://github.com/pyinstaller/pyinstaller/issues/2081
+#  - https://github.com/pyinstaller/pyinstaller/issues/2082
+#  - https://github.com/pyinstaller/pyinstaller/issues/2083
+#  - https://github.com/pyinstaller/pyinstaller/issues/2084
+#  - https://github.com/pyinstaller/pyinstaller/issues/2085
+#  - https://github.com/pyinstaller/pyinstaller/issues/2086
+#  - https://github.com/pyinstaller/pyinstaller/issues/2087
+#  - https://github.com/pyinstaller/pyinstaller/issues/2088
+#  - https://github.com/pyinstaller/pyinstaller/issues/2089
+#  - https://github.com/pyinstaller/pyinstaller/issues/2090
+#  - https://github.com/pyinstaller/pyinstaller/issues/2091
+#  - https://github.com/pyinstaller/pyinstaller/issues/2092
+#  - https://github.com/pyinstaller/pyinstaller/issues/2093
+#  - https://github.com/pyinstaller/pyinstaller/issues/2094
+#  - https://github.com/pyinstaller/pyinstaller/issues/2095
+#  - https://github.com/pyinstaller/pyinstaller/issues/2096
+#  - https://github.com/pyinstaller/pyinstaller/issues/2097
+#  - https://github.com/pyinstaller/pyinstaller/issues/2098
+#  - https://github.com/pyinstaller/pyinstaller/issues/2099
+#  - https://github.com/pyinstaller/pyinstaller/issues/2100
+#  - https://github.com/pyinstaller/pyinstaller/issues/2101
+#  - https://github.com/pyinstaller/pyinstaller/issues/2102
+#  - https://github.com/pyinstaller/pyinstaller/issues/2103
+#  - https://github.com/pyinstaller/pyinstaller/issues/2104
+#  - https://github.com/pyinstaller/pyinstaller/issues/2105
+#  - https://github.com/pyinstaller/pyinstaller/issues/2106
+#  - https://github.com/pyinstaller/pyinstaller/issues/2107
+#  - https://github.com/pyinstaller/pyinstaller/issues/2108
+#  - https://github.com/pyinstaller/pyinstaller/issues/2109
+#  - https://github.com/pyinstaller/pyinstaller/issues/2110
+#  - https://github.com/pyinstaller/pyinstaller/issues/2111
+#  - https://github.com/pyinstaller/pyinstaller/issues/2112
+#  - https://github.com/pyinstaller/pyinstaller/issues/2113
+#  - https://github.com/pyinstaller/pyinstaller/issues/2114
+#  - https://github.com/pyinstaller/pyinstaller/issues/2115
+#  - https://github.com/pyinstaller/pyinstaller/issues/2116
+#  - https://github.com/pyinstaller/pyinstaller/issues/2117
+#  - https://github.com/pyinstaller/pyinstaller/issues/2118
+#  - https://github.com/pyinstaller/pyinstaller/issues/2119
+#  - https://github.com/pyinstaller/pyinstaller/issues/2120
+#  - https://github.com/pyinstaller/pyinstaller/issues/2121
+#  - https://github.com/pyinstaller/pyinstaller/issues/2122
+#  - https://github.com/pyinstaller/pyinstaller/issues/2123
+#  - https://github.com/pyinstaller/pyinstaller/issues/2124
+#  - https://github.com/pyinstaller/pyinstaller/issues/2125
+#  - https://github.com/pyinstaller/pyinstaller/issues/2126
+#  - https://github.com/pyinstaller/pyinstaller/issues/2127
+#  - https://github.com/pyinstaller/pyinstaller/issues/2128
+#  - https://github.com/pyinstaller/pyinstaller/issues/2129
+#  - https://github.com/pyinstaller/pyinstaller/issues/2130
+#  - https://github.com/pyinstaller/pyinstaller/issues/2131
+#  - https://github.com/pyinstaller/pyinstaller/issues/2132
+#  - https://github.com/pyinstaller/pyinstaller/issues/2133
+#  - https://github.com/pyinstaller/pyinstaller/issues/2134
+#  - https://github.com/pyinstaller/pyinstaller/issues/2135
+#  - https://github.com/pyinstaller/pyinstaller/issues/2136
+#  - https://github.com/pyinstaller/pyinstaller/issues/2137
+#  - https://github.com/pyinstaller/pyinstaller/issues/2138
+#  - https://github.com/pyinstaller/pyinstaller/issues/2139
+#  - https://github.com/pyinstaller/pyinstaller/issues/2140
+#  - https://github.com/pyinstaller/pyinstaller/issues/2141
+#  - https://github.com/pyinstaller/pyinstaller/issues/2142
+#  - https://github.com/pyinstaller/pyinstaller/issues/2143
+#  - https://github.com/pyinstaller/pyinstaller/issues/2144
+#  - https://github.com/pyinstaller/pyinstaller/issues/2145
+#  - https://github.com/pyinstaller/pyinstaller/issues/2146
+#  - https://github.com/pyinstaller/pyinstaller/issues/2147
+#  - https://github.com/pyinstaller/pyinstaller/issues/2148
+#  - https://github.com/pyinstaller/pyinstaller/issues/2149
+#  - https://github.com/pyinstaller/pyinstaller/issues/2150
+#  - https://github.com/pyinstaller/pyinstaller/issues/2151
+#  - https://github.com/pyinstaller/pyinstaller/issues/2152
+#  - https://github.com/pyinstaller/pyinstaller/issues/2153
+#  - https://github.com/pyinstaller/pyinstaller/issues/2154
+#  - https://github.com/pyinstaller/pyinstaller/issues/2155
+#  - https://github.com/pyinstaller/pyinstaller/issues/2156
+#  - https://github.com/pyinstaller/pyinstaller/issues/2157
+#  - https://github.com/pyinstaller/pyinstaller/issues/2158
+#  - https://github.com/pyinstaller/pyinstaller/issues/2159
+#  - https://github.com/pyinstaller/pyinstaller/issues/2160
+#  - https://github.com/pyinstaller/pyinstaller/issues/2161
+#  - https://github.com/pyinstaller/pyinstaller/issues/2162
+#  - https://github.com/pyinstaller/pyinstaller/issues/2163
+#  - https://github.com/pyinstaller/pyinstaller/issues/2164
+#  - https://github.com/pyinstaller/pyinstaller/issues/2165
+#  - https://github.com/pyinstaller/pyinstaller/issues/2166
+#  - https://github.com/pyinstaller/pyinstaller/issues/2167
+#  - https://github.com/pyinstaller/pyinstaller/issues/2168
+#  - https://github.com/pyinstaller/pyinstaller/issues/2169
+#  - https://github.com/pyinstaller/pyinstaller/issues/2170
+#  - https://github.com/pyinstaller/pyinstaller/issues/2171
+#  - https://github.com/pyinstaller/pyinstaller/issues/2172
+#  - https://github.com/pyinstaller/pyinstaller/issues/2173
+#  - https://github.com/pyinstaller/pyinstaller/issues/2174
+#  - https://github.com/pyinstaller/pyinstaller/issues/2175
+#  - https://github.com/pyinstaller/pyinstaller/issues/2176
+#  - https://github.com/pyinstaller/pyinstaller/issues/2177
+#  - https://github.com/pyinstaller/pyinstaller/issues/2178
+#  - https://github.com/pyinstaller/pyinstaller/issues/2179
+#  - https://github.com/pyinstaller/pyinstaller/issues/2180
+#  - https://github.com/pyinstaller/pyinstaller/issues/2181
+#  - https://github.com/pyinstaller/pyinstaller/issues/2182
+#  - https://github.com/pyinstaller/pyinstaller/issues/2183
+#  - https://github.com/pyinstaller/pyinstaller/issues/2184
+#  - https://github.com/pyinstaller/pyinstaller/issues/2185
+#  - https://github.com/pyinstaller/pyinstaller/issues/2186
+#  - https://github.com/pyinstaller/pyinstaller/issues/2187
+#  - https://github.com/pyinstaller/pyinstaller/issues/2188
+#  - https://github.com/pyinstaller/pyinstaller/issues/2189
+#  - https://github.com/pyinstaller/pyinstaller/issues/2190
+#  - https://github.com/pyinstaller/pyinstaller/issues/2191
+#  - https://github.com/pyinstaller/pyinstaller/issues/2192
+#  - https://github.com/pyinstaller/pyinstaller/issues/2193
+#  - https://github.com/pyinstaller/pyinstaller/issues/2194
+#  - https://github.com/pyinstaller/pyinstaller/issues/2195
+#  - https://github.com/pyinstaller/pyinstaller/issues/2196
+#  - https://github.com/pyinstaller/pyinstaller/issues/2197
+#  - https://github.com/pyinstaller/pyinstaller/issues/2198
+#  - https://github.com/pyinstaller/pyinstaller/issues/2199
+#  - https://github.com/pyinstaller/pyinstaller/issues/2200
+#  - https://github.com/pyinstaller/pyinstaller/issues/2201
+#  - https://github.com/pyinstaller/pyinstaller/issues/2202
+#  - https://github.com/pyinstaller/pyinstaller/issues/2203
+#  - https://github.com/pyinstaller/pyinstaller/issues/2204
+#  - https://github.com/pyinstaller/pyinstaller/issues/2205
+#  - https://github.com/pyinstaller/pyinstaller/issues/2206
+#  - https://github.com/pyinstaller/pyinstaller/issues/2207
+#  - https://github.com/pyinstaller/pyinstaller/issues/2208
+#  - https://github.com/pyinstaller/pyinstaller/issues/2209
+#  - https://github.com/pyinstaller/pyinstaller/issues/2210
+#  - https://github.com/pyinstaller/pyinstaller/issues/2211
+#  - https://github.com/pyinstaller/pyinstaller/issues/2212
+#  - https://github.com/pyinstaller/pyinstaller/issues/2213
+#  - https://github.com/pyinstaller/pyinstaller/issues/2214
+#  - https://github.com/pyinstaller/pyinstaller/issues/2215
+#  - https://github.com/pyinstaller/pyinstaller/issues/2216
+#  - https://github.com/pyinstaller/pyinstaller/issues/2217
+#  - https://github.com/pyinstaller/pyinstaller/issues/2218
+#  - https://github.com/pyinstaller/pyinstaller/issues/2219
+#  - https://github.com/pyinstaller/pyinstaller/issues/2220
+#  - https://github.com/pyinstaller/pyinstaller/issues/2221
+#  - https://github.com/pyinstaller/pyinstaller/issues/2222
+#  - https://github.com/pyinstaller/pyinstaller/issues/2223
+#  - https://github.com/pyinstaller/pyinstaller/issues/2224
+#  - https://github.com/pyinstaller/pyinstaller/issues/2225
+#  - https://github.com/pyinstaller/pyinstaller/issues/2226
+#  - https://github.com/pyinstaller/pyinstaller/issues/2227
+#  - https://github.com/pyinstaller/pyinstaller/issues/2228
+#  - https://github.com/pyinstaller/pyinstaller/issues/2229
+#  - https://github.com/pyinstaller/pyinstaller/issues/2230
+#  - https://github.com/pyinstaller/pyinstaller/issues/2231
+#  - https://github.com/pyinstaller/pyinstaller/issues/2232
+#  - https://github.com/pyinstaller/pyinstaller/issues/2233
+#  - https://github.com/pyinstaller/pyinstaller/issues/2234
+#  - https://github.com/pyinstaller/pyinstaller/issues/2235
+#  - https://github.com/pyinstaller/pyinstaller/issues/2236
+#  - https://github.com/pyinstaller/pyinstaller/issues/2237
+#  - https://github.com/pyinstaller/pyinstaller/issues/2238
+#  - https://github.com/pyinstaller/pyinstaller/issues/2239
+#  - https://github.com/pyinstaller/pyinstaller/issues/2240
+#  - https://github.com/pyinstaller/pyinstaller/issues/2241
+#  - https://github.com/pyinstaller/pyinstaller/issues/2242
+#  - https://github.com/pyinstaller/pyinstaller/issues/2243
+#  - https://github.com/pyinstaller/pyinstaller/issues/2244
+#  - https://github.com/pyinstaller/pyinstaller/issues/2245
+#  - https://github.com/pyinstaller/pyinstaller/issues/2246
+#  - https://github.com/pyinstaller/pyinstaller/issues/2247
+#  - https://github.com/pyinstaller/pyinstaller/issues/2248
+#  - https://github.com/pyinstaller/pyinstaller/issues/2249
+#  - https://github.com/pyinstaller/pyinstaller/issues/2250
+
+# Key files (will be generated during runtime)
+keys/
+*.key
+*.pem
+
+# Debian packaging build artifacts (dpkg-buildpackage / debhelper / dh-python's
+# pybuild). dpkg-buildpackage normally drops the final *.deb/*.changes/
+# *.buildinfo one directory above this checkout, but these patterns also
+# cover the --build-dir-inside-the-tree case and any leftovers from manual
+# cleanup between builds.
+.pybuild/
+debian/tmp/
+debian/.debhelper/
+debian/files
+debian/debhelper-build-stamp
+debian/*.debhelper
+debian/*.debhelper.log
+debian/*.substvars
+# Per-binary-package staging directories dh_install/pybuild populate during
+# a build - named after debian/control's Package: stanzas (and, on some
+# dh-python versions, python3-<PYBUILD_NAME> - see debian/rules).
+debian/sslcrtsrv-client/
+debian/sslcrtsrv-server/
+debian/python3-sslcrtsrv/
+*.deb
+*.ddeb
+*.udeb
+*.changes
+*.buildinfo
+*.dsc
+*.orig.tar.*
+
+# Generated at runtime (scs-server init / init_database()) - never shipped
+# or committed; each deployment creates its own.
+server_config.json
+keysrv.db
+
+

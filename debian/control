@@ -1,0 +1,69 @@
+Source: sslcrtsrv
+Section: admin
+Priority: optional
+Maintainer: Garry Glendown <sslcrtsrv@mlfwd.de>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               python3-all,
+               python3-setuptools
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: sslcrtsrv-client
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3-cryptography
+Recommends: python3-rich
+Description: SSLCrtSrv client - request and retrieve managed certificates
+ Client tool (scs-client) for the SSLCrtSrv certificate management
+ system: registers a host with an SSLCrtSrv server, requests certificates for
+ given FQDNs, and retrieves issued key/certificate/intermediate files.
+ .
+ python3-rich is optional: scs-client listcerts/info fall back to plain
+ text output without it, rather than requiring it.
+ .
+ Install sslcrtsrv-server instead on the host running the certificate server
+ itself.
+
+Package: sslcrtsrv-server
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         adduser,
+         sslcrtsrv-client (= ${binary:Version}),
+         python3-sqlalchemy,
+         python3-alembic,
+         python3-textual,
+         python3-pytz,
+         python3-rich
+Recommends: acme.sh,
+            bind9-dnsutils
+Suggests: python3-pymysql,
+          python3-psycopg2,
+          python3-josepy
+Description: SSLCrtSrv server - certificate management server and admin tools
+ Server-side tools for the SSLCrtSrv certificate management system:
+ .
+  * scs-server - the TCP server clients register/request against
+  * scs-crtmanager / scs-cltmanager - certificate and client
+    administration CLIs
+  * scs-crtrequest - requests/renews certificates via acme.sh
+  * scs-admintui - full-screen terminal admin dashboard
+  * scs-dbmigrate - one-time schema upgrades and cross-backend data
+    migration for the database (SQLite by default; MySQL/MariaDB and
+    PostgreSQL are also supported, see Manual.MD)
+  * scs-acme-server - optional RFC 8555 ACME protocol server, letting
+    other ACME clients request certificates through this server instead
+    of (or alongside) the native scs-client protocol
+ .
+ acme.sh itself is not packaged for Debian and must be installed separately
+ (see https://github.com/acmesh-official/acme.sh) if you intend to use
+ scs-crtrequest. bind9-dnsutils (for `dig`) is needed for scs-crtrequest's
+ DNS delegation check, which runs by default (pass --no-check-dns to skip
+ it instead).
+ .
+ python3-pymysql/python3-psycopg2 are only needed if you configure the
+ MySQL/MariaDB or PostgreSQL database backend respectively - the default
+ SQLite backend needs neither. python3-josepy is only needed if you run
+ scs-acme-server; nothing else in this package imports it.

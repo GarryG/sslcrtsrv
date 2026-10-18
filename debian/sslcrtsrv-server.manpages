@@ -1,0 +1,8 @@
+man/scs-server.1
+man/scs-crtmanager.1
+man/scs-cltmanager.1
+man/scs-crtrequest.1
+man/scs-admintui.1
+man/scs-web-admin-bridge.1
+man/scs-dbmigrate.1
+man/scs-acme-server.1

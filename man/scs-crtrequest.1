@@ -1,0 +1,90 @@
+.TH SCS-CRTREQUEST 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-crtrequest \- request and renew certificates via acme.sh
+.SH SYNOPSIS
+.B scs-crtrequest
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-crtrequest
+drives
+.BR acme.sh (1)
+to request and renew every approved-and-due certificate in one pass, or one
+named certificate. It has no subcommands \(em behavior is selected entirely
+by flags. Typically run unattended (e.g. from cron), with no
+.B \-\-cert\-name
+given so every approved certificate is processed.
+.SH OPTIONS
+.TP
+.BI "\-\-config " PATH
+Server config file to read the certificate directory and default ACME
+provider from. Default
+.IR /etc/sslcrtsrv/server_config.json .
+.TP
+.BI "\-\-cert\-name " FQDNS
+Act on one specific FQDNs set instead of every approved one.
+.TP
+.B \-\-staging
+Request from the certificate authority's staging/test environment instead of
+production.
+.TP
+.B \-\-force
+Allow a staging certificate to overwrite an existing valid production one.
+.TP
+.B \-\-debug\-acme
+Add
+.BR acme.sh 's
+own
+.B \-\-debug
+flag to every invocation.
+.TP
+.B \-\-no\-check\-dns
+By default, DNS delegation is checked before every issuance/renewal attempt,
+and a certificate whose delegation isn't in place is skipped with a warning
+instead of letting
+.B acme.sh
+fail on it. This flag disables that check entirely, restoring the
+unconditional old behavior.
+.TP
+.B \-\-check\-dns\-only
+Pure diagnostic: check DNS delegation and report, never call
+.B acme.sh
+or touch the database. Requires
+.BR dig (1).
+.TP
+.B \-\-force\-dns\-refresh
+Force a real re-issuance to push a freshly rotated DNS-provider token into
+.BR acme.sh 's
+saved state immediately. Consumes a real issuance per domain touched \(em not
+for routine use.
+.TP
+.B \-\-notify
+If this run finishes with one or more failures, also send an admin
+notification via
+.IR server_config.json 's
+.B notifiers
+/
+.B notification_routing
+(the
+.B error
+event) \(em a single message summarizing every error logged during the run.
+Off by default; meant for unattended runs where nobody is watching stdout or
+the log file.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file.
+.br
+.I crtrequest.log
+\(em typical redirected-output log path for a cron invocation.
+.SH SEE ALSO
+.BR scs-server (1),
+.BR scs-crtmanager (1),
+.BR scs-admintui (1),
+.BR scs-acme-server (1),
+.BR acme.sh (1),
+.BR dig (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference.
+.SH AUTHOR
+Garry Glendown

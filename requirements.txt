@@ -6,6 +6,6 @@ alembic>=1.19
 textual>=8.2
 pytz>=2025.2
 rich>=15.0
-PyMySQL>=1.0
+PyMySQL>=1.2.3
 psycopg2-binary>=2.9
 josepy>=2.2

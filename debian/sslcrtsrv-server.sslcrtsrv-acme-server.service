@@ -1,0 +1,31 @@
+[Unit]
+Description=SSLCrtSrv ACME (RFC 8555) protocol server
+Documentation=https://github.com/GarryG/sslcrtsrv
+# Requires server_config.json to already exist, with acme_enabled=true and
+# acme_external_url set - see scs-acme-server(1). Run `scs-server init` (and
+# add those two fields) once as root before starting/enabling this unit. It
+# is intentionally not enabled by default on install, same as
+# sslcrtsrv-server.service.
+ConditionPathExists=/etc/sslcrtsrv/server_config.json
+After=network.target
+
+[Service]
+Type=simple
+User=sslcrtsrv
+Group=sslcrtsrv
+ExecStart=/usr/bin/scs-acme-server
+Restart=on-failure
+RestartSec=5
+
+# Hardening (SECURITY_FINDINGS.md finding #20) - same rationale and paths
+# as sslcrtsrv-server.service; this process shares the same DATA_DIR/
+# BASE_CONFIG_DIR, nothing additional needed.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/sslcrtsrv /etc/sslcrtsrv
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+.TH SCS-ADMINTUI 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-admintui \- SSLCrtSrv full-screen terminal admin dashboard
+.SH SYNOPSIS
+.B scs-admintui
+.SH DESCRIPTION
+.B scs-admintui
+launches a full-screen terminal dashboard covering onboarding clients,
+and managing certificates, clients, permissions, notifiers, and server
+configuration, all from one place. It takes no arguments beyond
+.B \-h
+/
+.B \-\-help
+and
+.BR \-\-version ;
+the entire interface is the dashboard itself, reached once the program
+starts.
+.PP
+Once running:
+.B q
+quits, and
+.B F5
+refreshes the active tab. Each tab has its own keybindings, shown in the
+dashboard's own footer.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file; read and, from the dashboard's Config tab,
+written.
+.SH SEE ALSO
+.BR scs-crtmanager (1),
+.BR scs-cltmanager (1),
+.BR scs-server (1)
+.PP
+The project's
+.I Manual.MD
+documents every tab of the dashboard in detail.
+.SH AUTHOR
+Garry Glendown

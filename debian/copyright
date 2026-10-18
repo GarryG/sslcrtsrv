@@ -1,0 +1,18 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: sslcrtsrv
+Source: https://github.com/GarryG/sslcrtsrv
+
+Files: *
+Copyright: 2025-2026 Garry Glendown
+License: FSL-1.1-ALv2
+ This software is provided under the Functional Source License (FSL),
+ version 1.1, ALv2 Future License variant. See the LICENSE file at the
+ root of the source package for the full license text and its
+ commercial-use terms. On the second anniversary of each release's
+ publication, that release additionally becomes available under the
+ Apache License, Version 2.0.
+ .
+ NOTE: FSL is not one of debian/copyright's standard SPDX-style short names
+ and has not been vetted against Debian's DFSG/Main-suitability policy or
+ lintian's license database. This is not a Debian-archive-ready copyright
+ file as-is.

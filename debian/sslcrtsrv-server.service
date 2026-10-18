@@ -1,0 +1,32 @@
+[Unit]
+Description=SSLCrtSrv certificate management server
+Documentation=https://github.com/GarryG/sslcrtsrv
+# Requires server_config.json to already exist - run
+# `scs-server init [options]` once as root before starting/enabling
+# this unit. It is intentionally not enabled by default on install.
+ConditionPathExists=/etc/sslcrtsrv/server_config.json
+After=network.target
+
+[Service]
+Type=simple
+User=sslcrtsrv
+Group=sslcrtsrv
+ExecStart=/usr/bin/scs-server
+Restart=on-failure
+RestartSec=5
+
+# Hardening (SECURITY_FINDINGS.md finding #20) - already runs as an
+# unprivileged dedicated user; this limits what a compromised process could
+# still do beyond that. ReadWritePaths covers everything this process
+# writes to: server_config.json/keypair under /etc/sslcrtsrv, and the
+# database/logs (including log_dir, which defaults under /opt/sslcrtsrv)
+# under /opt/sslcrtsrv.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/sslcrtsrv /etc/sslcrtsrv
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

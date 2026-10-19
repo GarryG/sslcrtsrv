@@ -1,0 +1,39 @@
+# sslcrtsrv-client owns the shared package namespace (sslcrtsrv/__init__.py,
+# sslcrtsrv/common/*) plus the light-dependency client tool. sslcrtsrv-server
+# Depends on this package and adds the rest of the tree in its own .install
+# file - see that file's header comment for why the split lands where it does.
+#
+# The metadata directory for the whole "sslcrtsrv" distribution is also
+# claimed here (not duplicated into sslcrtsrv-server), since one build only
+# produces one metadata directory - it must belong to exactly one binary
+# package, and sslcrtsrv-server already depends on this one. Older
+# setup.py-install-based toolchains (verified against: dh-python
+# 4.20201102+nmu1 / setuptools 52) produce a classic *.egg-info directory;
+# a wheel/PEP517-based build on newer tooling may instead produce
+# *.dist-info - adjust this pattern if `dpkg -c` on a newer build environment
+# shows that shape instead.
+usr/lib/python3/dist-packages/sslcrtsrv*.egg-info/*
+usr/lib/python3/dist-packages/sslcrtsrv/__init__.py
+# Written by debian/rules' override_dh_auto_install, not part of the source
+# tree - see that file's comment and common/client_utils.py's
+# detect_package_type().
+usr/lib/python3/dist-packages/sslcrtsrv/PACKAGE_TYPE
+usr/lib/python3/dist-packages/sslcrtsrv/client.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/__init__.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/auth_failure_tracker.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/client_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/config_watcher.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/constants.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/crypto_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/fingerprint_words.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/fqdns_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/geoip_acl.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/http_abuse_tracker.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/logging_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/message_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/network_acl.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/network_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/notify_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/server_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/system_utils.py
+usr/bin/scs-client

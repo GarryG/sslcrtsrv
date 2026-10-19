@@ -1,0 +1,112 @@
+.TH SCS-ACME-SERVER 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-acme-server \- RFC 8555 ACME protocol server for SSLCrtSrv
+.SH SYNOPSIS
+.B scs-acme-server
+.RI [ \-\-config " " PATH ]
+.SH DESCRIPTION
+.B scs-acme-server
+is a second, independent listener that lets third-party ACME clients (e.g.
+.BR certbot (1)
+or
+.BR acme.sh (1)
+itself) request certificates through this server's own account/authorization
+model, instead of the native
+.BR scs-client (1)
+protocol. It shares the same database as
+.BR scs-server (1)
+and the same
+.I server_config.json
+\(em there is no separate ACME-specific config file and no
+.B init
+subcommand of its own.
+.PP
+Run as its own long-lived process, typically behind a reverse proxy that
+terminates TLS (see
+.B acme_external_url
+below) and forwards the ACME path prefix to
+.BR scs-acme-server 's
+plain-HTTP listener. It has nothing to do until
+.B acme_enabled
+is set to
+.B true
+in
+.IR server_config.json ,
+and refuses to start without it. See
+.I ACME_SERVER_DESIGN.md
+in the project source for the full protocol design and reverse-proxy
+requirements.
+.PP
+Certificate issuance for orders placed through this server is still carried
+out by
+.BR scs-crtrequest (1),
+which must be run (e.g. from cron) exactly as it already is for the native
+protocol \(em no separate cron job is needed for ACME orders.
+.SH OPTIONS
+.TP
+.BI "\-\-config " PATH
+Server config file to read
+.B acme_*
+settings, the database location, and notifier configuration from. Default
+.IR /etc/sslcrtsrv/server_config.json .
+.SH CONFIGURATION
+The following fields in
+.I server_config.json
+control this server; there is currently no CLI flag on
+.B scs-acme-server
+itself to set them \(em use
+.BR scs-server (1)
+.B init
+or edit the file directly.
+.TP
+.B acme_enabled
+Must be
+.B true
+for this process to start at all. Default
+.IR false .
+.TP
+.B acme_external_url
+Required whenever
+.B acme_enabled
+is
+.BR true .
+The externally-visible base URL of the ACME endpoint, behind the mandatory
+reverse proxy \(em e.g.
+.IR https://ca.example.com/acme .
+Every ACME resource URL returned to clients is built from this, never from
+request headers.
+.TP
+.B acme_listen
+Local address this process binds to (behind the reverse proxy). Default
+.IR 127.0.0.1 .
+.TP
+.B acme_port
+Local port this process binds to. Default
+.IR 5580 .
+.TP
+.B acme_trusted_proxy_ip
+Optional. The reverse proxy's own address \(em when the direct TCP peer of a
+request matches this exactly,
+.B X-Forwarded-For
+is trusted for IP-pinning enforcement (see
+.BR scs-cltmanager (1)'s
+.B set_allowed_ip
+command); otherwise
+.B X-Forwarded-For
+is never consulted, regardless of what a client sends. Default
+.IR unset ,
+meaning IP-pinning (if any account has it configured) always checks the
+direct TCP peer address only.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file, shared with
+.BR scs-server (1).
+.SH SEE ALSO
+.BR scs-server (1),
+.BR scs-crtrequest (1),
+.BR scs-cltmanager (1)
+.PP
+.I ACME_SERVER_DESIGN.md
+in the project source has the full protocol design and rationale.
+.SH AUTHOR
+Garry Glendown

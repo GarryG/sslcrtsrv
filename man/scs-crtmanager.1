@@ -1,0 +1,77 @@
+.TH SCS-CRTMANAGER 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-crtmanager \- manage SSLCrtSrv's certificate inventory
+.SH SYNOPSIS
+.B scs-crtmanager
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-crtmanager
+is a server-side administration tool for the certificate inventory: listing,
+adding certificates from existing files, replacing certificate data,
+deleting certificates, reporting stale downloads, and managing the
+ACME provider assigned to each certificate. Running it with no subcommand at
+all prints help and exits 1.
+.SH SUBCOMMANDS
+.TP
+.BI "list " "[\-\-requested] [\-\-clients]"
+The certificate inventory.
+.B \-\-requested
+shows only pending/unissued certificates;
+.B \-\-clients
+also shows which clients have access to each one.
+.TP
+.BI "addlocal " "key_file cert_file [intermediate_file]"
+Add a certificate from existing PEM files \(em no
+.B acme.sh
+involved. FQDNs are extracted from the certificate itself.
+.TP
+.BI "update " "key_file cert_file [intermediate_file]"
+Replace an existing certificate's files in place, keeping every reference to
+it (client permissions) intact.
+.TP
+.BI "delete " identifier
+Delete a certificate (identified by its FQDNs or database row ID) and its
+.B acme.sh
+working directory, after an interactive yes/no confirmation.
+.TP
+.B delete-invalid
+List, then (after confirmation) bulk-delete, every expired certificate.
+.TP
+.BI "warn-stale-downloads " "[\-\-days N]"
+Per-client report of active certificate assignments whose last
+.I downloaded
+copy is expiring within
+.I N
+days (default 21), already superseded by a renewal, or never downloaded at
+all.
+.TP
+.BI "set-provider " "identifier provider"
+Change which ACME provider a certificate uses, or set it to
+.B manual
+to permanently exclude it from
+.BR scs-crtrequest (1) 's
+automation.
+.TP
+.BI "init-db-key " "[\-\-overwrite]"
+One-time: generate the at-rest database-encryption keypair.
+.B \-\-overwrite
+is dangerous \(em it orphans every already-encrypted row unless re-encrypted
+first.
+.TP
+.BI "migrate-encrypt-keys " "[\-\-dry-run]"
+One-time: encrypt any legacy plaintext private keys already in the database.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em read for the database location and certificate directory.
+.SH SEE ALSO
+.BR scs-server (1),
+.BR scs-cltmanager (1),
+.BR scs-admintui (1),
+.BR scs-crtrequest (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference.
+.SH AUTHOR
+Garry Glendown

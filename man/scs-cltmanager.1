@@ -1,0 +1,130 @@
+.TH SCS-CLTMANAGER 1 "October 2026" "sslcrtsrv 0.9.7" "SSLCrtSrv Manual"
+.SH NAME
+scs-cltmanager \- manage SSLCrtSrv client registrations and permissions
+.SH SYNOPSIS
+.B scs-cltmanager
+.RI [ \-\-config " " \fIPATH\fR ]
+.RI [ command ]
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-cltmanager
+is a server-side administration tool for client registrations: confirming or
+revoking clients, and granting or revoking their access to certificates.
+Running it with no subcommand at all lists unconfirmed client registrations.
+.TP
+.BI "\-\-config " PATH
+Default
+.IR /etc/sslcrtsrv/server_config.json .
+Only relevant if the server being managed runs with a non-default config \(em
+it is what
+.B confirm
+reads to compute the server's own fingerprint for the identity-verification
+step, and what relocates the database lookup to that config's data directory
+if one is set.
+.SH SUBCOMMANDS
+.TP
+.B listall
+Short overview of every client.
+.TP
+.BI "list " "[client_id]"
+Every client and their certificate permissions, or just one client's if
+given.
+.TP
+.BI "registration_command " "[client_id] [\-\-server\-host HOST] [\-\-server\-port PORT]"
+Print the
+.BR scs-client (1)
+.B init
+and
+.B register
+command lines to run on a new client host, built from this server's own
+.IR registration_secret / port .
+.B \-\-server\-host
+is required unless
+.I listen_address
+is already a concrete, non-wildcard address (not
+.IR 0.0.0.0 " or " :: ),
+since there is no separate "public hostname" field to read one from
+automatically.
+.I client_id
+is embedded via
+.B \-\-client\-id
+if given; omit it to let the new client default to its own hostname. The
+registration secret is embedded directly in the printed
+.B init
+line for one-line convenience, which will appear in the new host's shell
+history and process listing \(em omit that flag from the printed command
+(so
+.BR scs-client (1)
+prompts for it interactively instead) if that matters for a given
+deployment.
+.TP
+.BI "confirm " client_id
+Confirm a pending registration \(em prompts for interactive yes/no after
+showing both public-key fingerprints, so the fingerprint can be verified
+out-of-band before confirming.
+.TP
+.BI "acme_confirm " client_id
+Confirm a pending ACME account (a client registered via
+.BR scs-acme-server (1)'s
+newAccount endpoint, rather than
+.BR scs-client (1)).
+Prompts for interactive yes/no after showing the account key's RFC 7638
+thumbprint. Unlike
+.BR confirm ,
+there is no server-side key involved in ACME's own JWS-based authentication,
+so only the client's own key fingerprint is shown.
+.TP
+.BI "revoke " client_id
+Un-confirm an already-confirmed client entirely. Not the same as
+.B revoke_permission
+below.
+.TP
+.BI "delete " client_id
+Delete a client entry outright, after confirmation.
+.TP
+.BI "assign " "client_id fqdns [\-\-valid\-until DATETIME]"
+Grant (or approve) a client's access to a certificate/FQDNs set, whether or
+not the client ever requested it itself.
+.B \-\-valid\-until
+optionally makes the grant expire automatically; omit for one that never
+expires.
+.TP
+.BI "revoke_permission " "client_id fqdns"
+Revoke a specific certificate grant, or every grant for that client if
+.I fqdns
+is
+.BR all .
+.TP
+.BI "set_expiry " "client_id fqdns " "{DATETIME|never}"
+Change an already-granted permission's expiry date without touching its
+status.
+.TP
+.BI "clean_requests " "[client_id]"
+Bulk-delete pending (unapproved) requests, for one client or every client,
+after confirmation.
+.TP
+.BI "set_allowed_ip " "client_id " "{IP-OR-CIDR|none}"
+Set or clear an optional IP-pinning restriction on a client \(em a second
+authentication factor on top of the cryptography that already authenticates
+every request. Only takes effect for ACME accounts (see
+.BR scs-acme-server (1));
+the traditional protocol never consults it. Validated as a real IP address or
+CIDR network (e.g.
+.IR 203.0.113.5 " or " 203.0.113.0/24 )
+before being stored;
+.B none
+clears an existing restriction.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file.
+.SH SEE ALSO
+.BR scs-crtmanager (1),
+.BR scs-server (1),
+.BR scs-admintui (1),
+.BR scs-acme-server (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference.
+.SH AUTHOR
+Garry Glendown

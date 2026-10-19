@@ -1,0 +1,48 @@
+#!/bin/sh
+set -e
+
+# Dedicated system account the server process (and, via the shared-group
+# convention in common/constants.py's SHARED_DIR_MODE/SHARED_FILE_MODE,
+# web_admin's PHP process) run as. Group membership - not just directory
+# existence - is what actually grants web_admin access; add www-data (or
+# whichever user runs PHP) to this group separately, this postinst does not
+# do that automatically since it doesn't know which web server user applies.
+if ! getent passwd sslcrtsrv >/dev/null; then
+    adduser --system --group --home /opt/sslcrtsrv --no-create-home \
+        --shell /usr/sbin/nologin sslcrtsrv
+fi
+
+# /etc/sslcrtsrv (config, keys), /opt/sslcrtsrv (database, cert data), and
+# /opt/sslcrtsrv/logs (every tool's common/logging_utils.py rotating log
+# file - DEFAULT_LOG_DIR, common/constants.py): owned by the sslcrtsrv user
+# itself (not root) so the server process - which runs as that user, per
+# sslcrtsrv-server.service's User=/Group= - can actually create/chmod its
+# own files and subdirectories (keysrv.db, cert-<id>/ working directories,
+# log files, ...) here without needing to be root. 0750/group-owned,
+# matching SHARED_DIR_MODE, still lets web_admin's PHP process (a different
+# user placed in the sslcrtsrv group) read/write the specific *files*
+# inside (their own mode is SHARED_FILE_MODE, 0660) without needing to own
+# the directory itself. `scs-server init` (run manually after this package
+# is installed) creates those actual config/key files.
+#
+# logs/ is pre-created here, explicitly, rather than left for
+# common/logging_utils.py's own ensure_secure_dir() call to create on first
+# use: an admin CLI tool (cltmanager.py/crtmanager.py/dbmigrate.py) is
+# typically run via sudo (as root), and if it happened to create this
+# directory first, it would end up root-owned - group members (including
+# the sslcrtsrv user the server process itself runs as) only get read+
+# execute on a 0750 directory they don't own, not write, so the server's
+# own log file would then fail to open. Creating it here, during postinst,
+# means it's always sslcrtsrv-owned from the start regardless of which
+# tool happens to run first.
+for dir in /etc/sslcrtsrv /opt/sslcrtsrv /opt/sslcrtsrv/logs; do
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+    fi
+    chown sslcrtsrv:sslcrtsrv "$dir"
+    chmod 0750 "$dir"
+done
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,23 @@
+# Everything that needs sqlalchemy/textual/pytz, or is only useful on the
+# server host - see sslcrtsrv-client.install for the base package this one
+# Depends on (owns sslcrtsrv/__init__.py, sslcrtsrv/common/* minus
+# database.py/db_crypto.py/acme_jose.py/acme_server_utils.py, and client.py).
+usr/lib/python3/dist-packages/sslcrtsrv/server.py
+usr/lib/python3/dist-packages/sslcrtsrv/crtmanager.py
+usr/lib/python3/dist-packages/sslcrtsrv/cltmanager.py
+usr/lib/python3/dist-packages/sslcrtsrv/crtrequest.py
+usr/lib/python3/dist-packages/sslcrtsrv/acme_server.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/database.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/db_crypto.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/acme_jose.py
+usr/lib/python3/dist-packages/sslcrtsrv/common/acme_server_utils.py
+usr/lib/python3/dist-packages/sslcrtsrv/admintui
+usr/lib/python3/dist-packages/sslcrtsrv/alembic
+usr/lib/python3/dist-packages/sslcrtsrv/dbmigrate.py
+usr/bin/scs-server
+usr/bin/scs-crtmanager
+usr/bin/scs-cltmanager
+usr/bin/scs-crtrequest
+usr/bin/scs-admintui
+usr/bin/scs-dbmigrate
+usr/bin/scs-acme-server

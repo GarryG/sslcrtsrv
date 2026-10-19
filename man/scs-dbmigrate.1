@@ -1,0 +1,60 @@
+.TH SCS-DBMIGRATE 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-dbmigrate \- SSLCrtSrv database schema upgrades and cross-backend data migration
+.SH SYNOPSIS
+.B scs-dbmigrate
+.RI [ \-\-config " " \fIPATH\fR ]
+.RI { upgrade-schema " | " migrate }
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-dbmigrate
+is deliberately the only tool in this project that touches schema DDL or
+copies data between database backends; every other tool only ever creates a
+fresh, up-to-date, empty schema on first run.
+.TP
+.BI "\-\-config " PATH
+Default
+.IR /etc/sslcrtsrv/server_config.json .
+.SH SUBCOMMANDS
+.TP
+.B upgrade-schema
+Bring the currently configured backend's schema up to date in place. Safe to
+run repeatedly \(em a no-op once already current, and a no-op against a
+brand-new database. Run this once after upgrading
+.B sslcrtsrv
+past a version that changed the schema, before starting any other tool.
+.TP
+.BI "migrate " "\-\-to\-backend {sqlite,mysql,postgresql} [options]"
+Copy every client/certificate/permission row to a freshly created target
+backend, then repoint
+.IR server_config.json " at it. Leaves the source backend/data untouched."
+.RS
+.TP
+.BI "\-\-to\-backend " "{sqlite,mysql,postgresql}"
+Required. Target database backend.
+.TP
+.BI "\-\-host " HOST ", \-\-port " PORT ", \-\-user " USER ", \-\-password " PASSWORD ", \-\-database " NAME
+Target connection details. Prompted for interactively if not given as a
+flag and needed for the chosen backend.
+.RE
+.PP
+A
+.I client_certificate_relations
+row referencing a client or certificate no longer present in the source is
+skipped and printed, not treated as fatal. A missing database driver
+(PyMySQL/psycopg2) or an unreachable target reports a plain, actionable error
+instead of a raw traceback.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file; updated in place by
+.B migrate
+once the copy succeeds.
+.SH SEE ALSO
+.BR scs-server (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference, including a fresh MySQL/PostgreSQL setup
+walkthrough.
+.SH AUTHOR
+Garry Glendown

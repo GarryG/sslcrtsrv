@@ -1,0 +1,133 @@
+.TH SCS-CLIENT 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-client \- register with an SSLCrtSrv server and request, list, and retrieve managed certificates
+.SH SYNOPSIS
+.B scs-client
+.RI [ \-\-version ]
+.I subcommand
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-client
+is the client-side tool for the SSLCrtSrv certificate management system. It
+registers a host with an SSLCrtSrv server, requests certificates for given
+FQDNs, retrieves issued key/certificate/intermediate files, and can self-update
+by downloading a newer client package from the server's catalog.
+.PP
+Every subcommand except
+.B init
+takes
+.BR \-\-config " " \fIPATH\fR
+(default
+.IR /etc/sslcrtsrv/client_config.json ),
+and automatically attempts an admin notification on completion, driven purely
+by whatever
+.I client_config.json's
+own
+.B notifiers
+/
+.B notification_routing
+keys route for the outcome \(em there is no
+.B \-\-notify
+flag; with neither key configured, nothing is read or sent.
+.SH SUBCOMMANDS
+.TP
+.BI "init " "[options]"
+Create
+.I client_config.json
+and the client's identity keypair. Options:
+.BR \-\-client\-id ,
+.BR \-\-server\-host " (default " localhost ),
+.BR \-\-server\-port " (default " 5514 ),
+.BR \-\-datadir ,
+.BR \-\-registration\-secret " (prompted for interactively if omitted, to avoid shell-history exposure),"
+.BR \-\-config .
+Never wrapped in a notification, being a one-time interactive step.
+.TP
+.B register
+Register this client with the configured server. Fires the
+.B client_registered
+event on success.
+.TP
+.BI "request " "domains..."
+Register interest in a new FQDNs set (one comma-separated argument, or several
+space-separated ones). Fires
+.B client_certificate_requested
+on success.
+.TP
+.B listcerts
+List every FQDNs set this client is currently authorized for. Read-only;
+notifies only on failure.
+.TP
+.BI "info " "fqdns..."
+Read-only metadata for an already-authorized, already-issued certificate.
+Notifies only on failure.
+.TP
+.BI "retrieve " "fqdns... [options]"
+Fetch and save certificate data. Options:
+.BR \-\-key ,
+.BR \-\-cert ,
+.BR \-\-intermediate ,
+.BR \-\-combined ,
+.BR \-\-all " (a path prefix producing " .key / .cer / .inter " files),"
+.BR \-\-exec " (a shell command to run afterwards)."
+Exits
+.B 10
+instead of writing anything when an existing, still-valid destination file is
+already as new as the one just fetched \(em not treated as a failure, and
+fires no success-event notification either. Otherwise fires
+.B client_certificate_retrieved
+when a file was actually written or replaced.
+.TP
+.B checkversion
+Compare this client's version against the server's. Exits
+.B 0
+if they match or this client is newer,
+.B 1
+if the server is newer. Read-only; notifies only on failure (including the
+"server is newer" case).
+.TP
+.B listpackages
+Fetch and print the server's client-package catalog (name, version,
+description) \(em no download. Read-only; notifies only on failure.
+.TP
+.BI "update " "[options]"
+Check the server for a newer client package and, if one exists, download it
+(and install it, if a command is configured). Options:
+.BR \-\-update\-package " " \fINAME\fR " (falls back to " client_config.json 's
+.B update_package
+or
+.B update_package_base
+plus this install's detected package type),
+.BR \-\-update\-command " " \fICMD\fR " (falls back to " client_config.json 's
+.BR update_command ).
+Fires
+.B client_update_downloaded
+(downloaded, not installed) or
+.B client_update_installed
+(downloaded and installed); fires nothing if already up to date.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+A general failure (connection, authentication, or a subcommand-reported
+error).
+.TP
+.B 10
+.B retrieve
+only: the existing destination file was already current, nothing was written.
+Not an error.
+.SH FILES
+.I /etc/sslcrtsrv/client_config.json
+\(em default configuration file, holding the client's identity keypair,
+server address, registration secret, and optional notifier/update settings.
+.SH SEE ALSO
+.BR scs-server (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference, including every configuration field and the
+wire protocol this tool speaks.
+.SH AUTHOR
+Garry Glendown

@@ -1,0 +1,10 @@
+{
+  "_comment": "Copy this file to /etc/sslcrtsrv/crtrequest_config.json (chmod 600, owned by the user running crtrequest.py) and fill in the actual values. Do not commit the real file. ACME_SH_PATH may be a bare command (looked up on PATH, the default) or an absolute path, e.g. /home/user/.acme.sh/acme.sh, if it's not installed somewhere already on PATH.",
+  "DNS_PROVIDER_CONFIG": {
+    "PDNS_Url": "https://dnssrv.domain.net:8081",
+    "PDNS_ServerId": "localhost",
+    "PDNS_Token": "YOUR_ACTUAL_PDNS_TOKEN_HERE"
+  },
+  "CHALLENGE_ALIAS": "acme-c.domain.net",
+  "ACME_SH_PATH": "acme.sh"
+}

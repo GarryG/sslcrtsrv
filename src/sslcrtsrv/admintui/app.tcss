@@ -1,0 +1,34 @@
+Screen {
+    layout: vertical;
+}
+
+DataTable {
+    height: 1fr;
+}
+
+.section-title {
+    text-style: bold;
+    padding: 1 0 0 1;
+}
+
+.empty-state {
+    padding: 1 2;
+    color: $text-muted;
+}
+
+.form-label {
+    padding: 1 0 0 0;
+}
+
+.form-actions {
+    height: auto;
+    align: right middle;
+    padding-top: 1;
+}
+
+.health-block {
+    border: round $primary;
+    padding: 1 2;
+    height: auto;
+    margin: 1;
+}

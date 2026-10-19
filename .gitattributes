@@ -1,0 +1,11 @@
+/internal        export-ignore
+/.gitlab-ci.yml  export-ignore
+/.gitlab-cy.yml  export-ignore
+
+# web_admin (PHP front-end) isn't functional yet - excluded from the public
+# release entirely, including its backend bridge tool and man page. See
+# internal/tools/publish_public_repo.py for the handful of further
+# text edits this also requires in shared files (setup.cfg, debian/*).
+/web_admin                         export-ignore
+/src/sslcrtsrv/web_admin_bridge.py export-ignore
+/man/scs-web-admin-bridge.1        export-ignore

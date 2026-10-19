@@ -1,0 +1,124 @@
+name: Release packages
+
+# internal/tools/publish_public_repo.py pushes an annotated tag "v<version>"
+# (matching sslcrtsrv.__version__) to this repo's main branch and, best-
+# effort, already creates a GitHub Release for it - this workflow builds the
+# actual downloadable packages from that same tag and attaches them to that
+# release (creating it instead, if the publish script's own attempt didn't
+# run or wasn't authenticated).
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential devscripts equivs ca-certificates
+          mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
+
+      - name: Build .deb packages
+        # debian/rules refuses to build if debian/changelog's version
+        # doesn't match sslcrtsrv.__version__ - this is deliberate (see
+        # that file's own comment) rather than something this workflow
+        # should work around.
+        run: dpkg-buildpackage -us -uc -b
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts/deb
+          mv ../*.deb ../*.changes ../*.buildinfo artifacts/deb/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-packages
+          path: artifacts/deb/*
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      # Must run before actions/checkout: fedora:latest has no git
+      # preinstalled, and actions/checkout silently falls back to a
+      # non-git tarball download (no .git directory at all) when git isn't
+      # available yet - which then makes the later `git archive` call fail
+      # with "fatal: not a git repository".
+      - name: Install build dependencies
+        run: dnf install -y rpm-build rpmdevtools python3-devel python3-setuptools python3-rpm-macros git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build RPM packages
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          rpmdev-setuptree
+          git archive --prefix="sslcrtsrv-${VERSION}/" -o "$HOME/rpmbuild/SOURCES/sslcrtsrv-${VERSION}.tar.gz" HEAD
+          cp packaging/rpm/sslcrtsrv.spec "$HOME/rpmbuild/SPECS/"
+          rpmbuild --define "version ${VERSION}" -ba "$HOME/rpmbuild/SPECS/sslcrtsrv.spec"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts/rpm
+          find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" -type f -name '*.rpm' -exec mv {} artifacts/rpm/ \;
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-packages
+          path: artifacts/rpm/*
+
+  build-tarballs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build generic client/server tarballs
+        # Reuses the existing build-tarballs.py - already derives the same
+        # client/server file split from debian/sslcrtsrv-*.install, so there
+        # is no second, separately-maintained file list to keep in sync here.
+        run: python3 build-tarballs.py --output-dir dist/
+
+      - name: Build plain source tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git archive --prefix="sslcrtsrv-${VERSION}/" -o "dist/sslcrtsrv-${VERSION}-src.tar.gz" HEAD
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-tarballs
+          path: dist/*
+
+  publish:
+    needs: [build-deb, build-rpm, build-tarballs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Attach packages to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Creates the release if publish_public_repo.py's own best-effort
+          # `gh release create` didn't run (e.g. not authenticated there),
+          # or just adds these assets to it if it already exists.
+          files: |
+            artifacts/deb-packages/*
+            artifacts/rpm-packages/*
+            artifacts/source-tarballs/*

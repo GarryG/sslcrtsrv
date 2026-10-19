@@ -1,0 +1,173 @@
+.TH SCS-SERVER 1 "September 2026" "sslcrtsrv 0.8.4" "SSLCrtSrv Manual"
+.SH NAME
+scs-server \- SSLCrtSrv certificate distribution server
+.SH SYNOPSIS
+.B scs-server
+.RI [ init " | " test-notifier ]
+.RI [ options ]
+.SH DESCRIPTION
+.B scs-server
+is the TCP server clients register and request certificates against. Run with
+the
+.B init
+positional argument to create or update
+.IR server_config.json ;
+run with
+.B test-notifier
+to send a real test message through one configured notifier; run with no
+arguments at all to actually start listening for client connections.
+.PP
+Re-running
+.B init
+against an existing config file prompts interactively to either overwrite it
+completely (generating a new server identity keypair) or update just the
+given options, keeping the existing keypair, registration secret, and any
+options not mentioned this time.
+.SH OPTIONS
+.TP
+.BI "\-\-config " PATH
+Config file path. Default
+.IR /etc/sslcrtsrv/server_config.json .
+Applies to all modes.
+.PP
+The following apply to
+.B init
+only, and are written into the config file:
+.TP
+.BI "\-\-listen " ADDR
+Listen address. Default
+.IR 0.0.0.0 .
+.TP
+.BI "\-\-port " N
+Listen port. Default
+.IR 5514 .
+.TP
+.BI "\-\-bind\-also " HOST : PORT
+Repeatable; adds one more address/port the server also listens on, handled
+identically to the primary one. Use
+.RI [ HOST ]: PORT
+for IPv6.
+.TP
+.BI "\-\-datadir " PATH
+Relocates the SQLite database to
+.IR PATH /keysrv.db .
+Default
+.IR /opt/sslcrtsrv .
+.TP
+.BI "\-\-certdir " PATH
+Where certificate files are stored on disk. Default
+.IR /opt/sslcrtsrv/certs .
+.TP
+.BI "\-\-syslog\-host " HOST ", \-\-syslog\-port " PORT ", \-\-syslog\-facility " FACILITY
+Log the running server process to a remote syslog server instead of the local
+one. Defaults: no host (uses the local
+.IR /dev/log ),
+port
+.IR 514 ,
+facility
+.IR daemon .
+.TP
+.BI "\-\-registration\-secret " SECRET
+Sets the shared client-registration secret explicitly, instead of generating
+one.
+.TP
+.BI "\-\-default\-acme\-provider " NAME
+Default
+.IR letsencrypt .
+.TP
+.BI "\-\-client\-package " NAME : PATH : VERSION [: DESCRIPTION ]
+Repeatable; upserts one entry into the downloadable client-package catalog.
+.TP
+.BI "\-\-notifier " NAME : TYPE : key = value [, key = value ...]
+Repeatable; upserts one admin notifier.
+.I TYPE
+is one of
+.BR email ", " webhook ", " pushover ", " pushsafer ", " gotify ", " ntfy .
+.TP
+.BI "\-\-notify\-on " EVENT : NAME [, NAME ...]
+Repeatable; upserts one event's routing to notifier name(s).
+.I EVENT
+is one of
+.BR registration ", " certificate_request ", " error .
+.TP
+.BI "\-\-notification\-rate\-limit " MAX
+Global cap on notifications per window for any notifier with no more specific
+override. Default
+.IR 10 ;
+.I 0
+or less disables the cap entirely.
+.TP
+.BI "\-\-notification\-rate\-limit\-window " SECONDS
+Global rate-limit window length. Default
+.IR 300 .
+.TP
+.BI "\-\-notification\-rate\-limit\-for " NAME : MAX [: WINDOW ]
+Repeatable; upserts one named rate-limit override.
+.I WINDOW
+is optional, inheriting the global window if omitted.
+.TP
+.BI "\-\-db\-backend " "{sqlite,mysql,postgresql}"
+Database backend. Omit to keep the sqlite/
+.B \-\-datadir
+default.
+.TP
+.BI "\-\-db\-host " HOST ", \-\-db\-port " PORT ", \-\-db\-user " USER ", \-\-db\-password " PASSWORD ", \-\-db\-name " NAME
+mysql/postgresql connection details.
+.B \-\-db\-port
+defaults to 3306/5432 respectively if omitted.
+.TP
+.BR \-\-acme\-enabled ", " \-\-no\-acme\-enabled
+Enable/disable
+.BR scs-acme-server (1),
+the optional RFC 8555 ACME protocol listener. Omit to leave whatever is
+already configured (or unset/disabled, for a new config) untouched.
+.B \-\-acme\-external\-url
+is also required before
+.B scs-acme-server
+will actually start.
+.TP
+.BI "\-\-acme\-external\-url " URL
+Externally-visible base URL of the ACME endpoint, behind the mandatory
+reverse proxy in front of
+.BR scs-acme-server \(em
+e.g.
+.IR https://ca.example.com/acme .
+Required for
+.B \-\-acme\-enabled
+to take effect.
+.TP
+.BI "\-\-acme\-listen " ADDR
+Local address
+.B scs-acme-server
+binds to, behind the reverse proxy. Default
+.IR 127.0.0.1 .
+.TP
+.BI "\-\-acme\-port " N
+Local port
+.B scs-acme-server
+binds to. Default
+.IR 5580 .
+.PP
+The following applies to
+.B test-notifier
+only:
+.TP
+.BI "\-\-notifier\-name " NAME
+Which configured notifier to send a test message through.
+.SH FILES
+.I /etc/sslcrtsrv/server_config.json
+\(em default configuration file.
+.SH SEE ALSO
+.BR scs-crtmanager (1),
+.BR scs-cltmanager (1),
+.BR scs-client (1),
+.BR scs-crtrequest (1),
+.BR scs-admintui (1),
+.BR scs-dbmigrate (1),
+.BR scs-acme-server (1)
+.PP
+The project's
+.I Manual.MD
+has the full narrative reference.
+.SH AUTHOR
+Garry Glendown

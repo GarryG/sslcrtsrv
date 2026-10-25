@@ -3,7 +3,7 @@
 cryptography>=49
 sqlalchemy>=2.0
 alembic>=1.19
-textual>=8.2
+textual>=8.2.8
 pytz>=2025.2
 rich>=15.0
 PyMySQL>=1.0

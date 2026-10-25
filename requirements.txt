@@ -2,7 +2,7 @@
 # For GitHub's dependency graph/Dependabot only; see setup.cfg for the actual install metadata.
 cryptography>=49
 sqlalchemy>=2.0
-alembic>=1.19
+alembic>=1.20.1
 textual>=8.2
 pytz>=2025.2
 rich>=15.0

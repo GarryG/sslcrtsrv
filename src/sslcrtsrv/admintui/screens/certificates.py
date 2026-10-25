@@ -1,16 +1,19 @@
+from time import monotonic
+
 from rich.text import Text
 from textual import on, work
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.reactive import reactive
-from textual.widgets import Button, DataTable, Label, Static
+from textual.widgets import Button, DataTable, Input, Label, Static
 
 from ... import crtmanager
 from ...common.database import get_clients_for_certificate, permission_is_active, get_acme_issued_fqdns
 from ..util.capture import silence_stdout
 from ..util.notify import notify_safe
-from ..util.table import current_row_key, restore_row_cursor
+from ..util.table import current_row_key, restore_row_cursor, should_debounce_header_click, sort_text_key, \
+    toggle_sort_state
 from ..widgets.clickable_table import ClickableDataTable
 from ..widgets.confirm_modal import ConfirmModal
 from ..widgets.dns_check_modal import DnsCheckModal
@@ -30,23 +33,60 @@ class CertificatesView(Vertical):
         Binding("D", "delete_selected", "Delete"),
         Binding("d", "check_dns", "Check DNS"),
         Binding("c", "toggle_clients", "Toggle clients"),
+        Binding("ctrl+f", "focus_search", "Find"),
     ]
 
     filter_mode = reactive("all")
     show_clients = reactive(False)
+    search_text = reactive("")
+
+    # Click a header to sort by it (ascending), click again for descending -
+    # "ID", "Valid until", and "Origin" aren't sortable. For a multi-SAN
+    # certificate, "FQDN" is already the comma-joined list rendered as one
+    # space-separated string - sorted as plain text, same as any other
+    # column, not per-name.
+    SORTABLE_COLUMNS = {
+        "FQDN": sort_text_key,
+        "Last update": sort_text_key,
+        "Provider": sort_text_key,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sort_column = None
+        self._sort_reverse = False
+        self._last_header_click_column = None
+        self._last_header_click_time = None
 
     def compose(self):
         with Horizontal(classes="form-actions"):
+            yield Input(placeholder="Filter by FQDN...", id="certs-search", classes="search-input")
             yield Button("All", id="filter-all", variant="primary")
             yield Button("Expiring soon", id="filter-expiring")
             yield Button("Expired", id="filter-expired")
         table = ClickableDataTable(id="certs-table")
         table.cursor_type = "row"
-        table.add_columns("ID", "FQDN", "Valid until", "Last update", "Provider", "Origin")
+        labels = ("ID", "FQDN", "Valid until", "Last update", "Provider", "Origin")
+        # add_columns() auto-generates an opaque ColumnKey per column, unrelated
+        # to its label text - captured here (by label) so HeaderSelected/
+        # _apply_sort() below can always look a column up by the actual key
+        # DataTable itself uses, rather than assuming a column's key equals
+        # its label (version-fragile: DataTable.columns is keyed by ColumnKey,
+        # and relying on a plain str to compare equal to one isn't guaranteed
+        # across Textual versions - confirmed to vary in practice).
+        self._column_keys = dict(zip(labels, table.add_columns(*labels)))
         yield table
         yield Static("", id="certs-empty", classes="empty-state")
 
     def on_mount(self):
+        self.refresh_data()
+
+    def action_focus_search(self) -> None:
+        self.query_one("#certs-search", Input).focus()
+
+    @on(Input.Changed, "#certs-search")
+    def _on_search_changed(self, event: Input.Changed) -> None:
+        self.search_text = event.value
         self.refresh_data()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -67,6 +107,9 @@ class CertificatesView(Vertical):
             rows = [r for r in rows if r['is_near_expiry']]
         elif self.filter_mode == "expired":
             rows = [r for r in rows if r['is_expired']]
+
+        if self.search_text:
+            rows = [r for r in rows if self.search_text.lower() in r['fqdns'].lower()]
 
         empty = self.query_one("#certs-empty", Static)
         empty.update("No certificates match this filter." if not rows else "")
@@ -89,6 +132,43 @@ class CertificatesView(Vertical):
             table.add_row(*cells, key=row['fqdns'])
 
         restore_row_cursor(table, previous_key)
+        self._apply_sort(table)
+
+    @on(DataTable.HeaderSelected)
+    def _on_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        label = next((lbl for lbl, key in self._column_keys.items() if key == event.column_key), None)
+        if label not in self.SORTABLE_COLUMNS:
+            return
+        now = monotonic()
+        if should_debounce_header_click(self._last_header_click_column, self._last_header_click_time,
+                                         label, now):
+            return
+        self._last_header_click_column, self._last_header_click_time = label, now
+        self._sort_column, self._sort_reverse = toggle_sort_state(
+            self._sort_column, self._sort_reverse, label)
+        self._apply_sort(event.data_table)
+
+    def _apply_sort(self, table):
+        """Re-applies the current sort (if any) - called both right after a
+        header click and at the end of every refresh_data(), since
+        table.clear() discards any prior ordering just like it discards the
+        cursor position (see restore_row_cursor() above). Also redraws every
+        sortable column's header with a ▲/▼ indicator on whichever one is
+        currently active, clearing it from the rest. Always goes through
+        self._column_keys (the actual ColumnKey objects add_columns()
+        returned) rather than a column's label string - see compose()'s
+        comment for why."""
+        for label in self.SORTABLE_COLUMNS:
+            if label == self._sort_column:
+                arrow = " ▼" if self._sort_reverse else " ▲"
+            else:
+                arrow = ""
+            table.columns[self._column_keys[label]].label = Text(label + arrow)
+        if self._sort_column is None:
+            return
+        table.sort(self._column_keys[self._sort_column], key=self.SORTABLE_COLUMNS[self._sort_column],
+                   reverse=self._sort_reverse)
+        table.refresh()
 
     def _selected_fqdns(self):
         return current_row_key(self.query_one("#certs-table", DataTable))

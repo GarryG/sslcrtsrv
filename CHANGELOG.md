@@ -2,6 +2,15 @@
 
 Generated from `debian/changelog` - see that file for Debian packaging detail omitted here.
 
+## 0.9.9 - 2026-10-25
+
+- admintui: Clients and Certificates tabs now support sorting by clicking a column header (Client ID/Type/Version/Last connection for Clients; FQDN/Last update/Provider for Certificates) - click again to reverse
+- fixed: the above crashed on startup with KeyError looking up a sortable column by its label text - DataTable.columns is keyed by the ColumnKey object add_columns() actually generated, not by the label string; now captures and uses those real keys instead of assuming the two match
+- fixed: clicking a sortable header could only ever land on descending - on some terminals a single click reaches DataTable's header-click handling twice (it doesn't stop() the underlying click event the way row clicks do), double-toggling direction; header clicks on the same column are now debounced against this
+- admintui: Clients and Certificates tabs now have a live substring filter field (Client ID / FQDN respectively)
+- fixed: admintui Clients tab always showed "N/A" under "Last connection" for ACME clients, even active ones - now shows their most recent order's timestamp instead, since ACME never populates the traditional last-successful-connection field
+- client: retrieve now validates a downloaded key/certificate/intermediate bundle (integrity, key/cert match, intermediate chain) before writing any file - nothing is written if the bundle fails validation
+
 ## 0.9.8 - 2026-10-19
 
 - admintui: clients tab now highlights stale/unconfirmed clients in yellow (no successful connection/order in 2 months) or red (never connected, or not confirmed)

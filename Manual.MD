@@ -1,7 +1,7 @@
 
 # SSLCrtSrv Manual
 
-*Version: 0.9.8 / Last Update: 2026-10-19* 
+*Version: 0.9.9 / Last Update: 2026-10-25* 
 
 SSLCrtSrv is a self-hosted client/server system for centrally requesting, issuing, and securely distributing TLS certificates - via ACME DNS-01 automation or manual upload - to any number of registered client hosts. One administrator, and one server, replace per-host manual certificate handling across an entire fleet.
 
@@ -402,6 +402,8 @@ Once a certificate has actually been issued for that FQDNs set (`TECHNICAL_REFER
 ```
 scs-client retrieve www.example.com,mail.example.com --key /etc/ssl/private/www.key --cert /etc/ssl/certs/www.crt --exec "systemctl reload nginx"
 ```
+
+Before writing anything, the client validates the retrieved bundle - the key and certificate parse correctly, the certificate matches the key, and any intermediate correctly chains to the certificate. If a check fails, no file is written and whatever was already at the destination is left untouched.
 
 ### 4.4. systemd Service Management
 
@@ -808,7 +810,9 @@ This tab is a UI-only convenience - everything it does is a direct composition o
 
 ### 7.3. Certificates Tab
 
-Every certificate that actually exists in the database (`TECHNICAL_REFERENCE.md`'s Section 2.4), with a filter bar (All / Expiring soon / Expired) and, toggleable, a "Clients" column showing which clients have access to each one.
+Every certificate that actually exists in the database (`TECHNICAL_REFERENCE.md`'s Section 2.4), with a filter bar (All / Expiring soon / Expired) and, toggleable, a "Clients" column showing which clients have access to each one. Click the "FQDN", "Last update", or "Provider" column header to sort by it (ascending); click the same header again to reverse. For a multi-domain/SAN certificate, "FQDN" sorts on the full space-separated list of names as one string, not per-name.
+
+A search field to the left of the filter buttons (`Ctrl+F` to jump to it from the keyboard) narrows the table live as you type, matching "FQDN" by plain substring - case-insensitive, no wildcards or regular expressions. It combines with the filter bar and an active sort.
 
 | Key | Action |
 |---|---|
@@ -833,7 +837,11 @@ Certificate requests not yet issued (`crtmanager.py list --requested` - `TECHNIC
 
 ### 7.5. Clients Tab
 
-Every client, with a filter bar (All / Pending / Confirmed) and per-client certificate counts (valid / invalid-or-unissued / requested) - a certificate whose own permission has passed its expiry (`TECHNICAL_REFERENCE.md`'s Section 2.4.2) counts as invalid here too, even if the certificate itself is still perfectly valid. The "Last IP" column shows the source address of that client's most recent successful connection/request (`TECHNICAL_REFERENCE.md`'s Section 3.1) - for an ACME account behind the mandatory reverse proxy, this is the real client's resolved address, not the proxy's own, the same resolution `acme_access_control_use_forwarded_ip` uses (Section 9.13).
+Every client, with a filter bar (All / Pending / Confirmed) and per-client certificate counts (valid / invalid-or-unissued / requested) - a certificate whose own permission has passed its expiry (`TECHNICAL_REFERENCE.md`'s Section 2.4.2) counts as invalid here too, even if the certificate itself is still perfectly valid. The "Last IP" column shows the source address of that client's most recent successful connection/request (`TECHNICAL_REFERENCE.md`'s Section 3.1) - for an ACME account behind the mandatory reverse proxy, this is the real client's resolved address, not the proxy's own, the same resolution `acme_access_control_use_forwarded_ip` uses (Section 9.13). For an ACME client, "Last connection" shows its most recent order's timestamp instead - an ACME account authenticates via JWS, not the traditional protocol's signed-message path, so it never has a direct last-successful-connection record of its own.
+
+Click the "Client ID", "Type", "Version", or "Last connection" column header to sort by it (ascending); click the same header again to reverse. "Version" sorts numerically (e.g. `0.9.10` after `0.9.8`), not as plain text.
+
+A search field to the left of the filter buttons (`Ctrl+F` to jump to it from the keyboard) narrows the table live as you type, matching "Client ID" by plain substring - case-insensitive, no wildcards or regular expressions. It combines with the filter bar and an active sort.
 
 Each row is colored to flag clients needing attention: **red** for a client that isn't confirmed yet, or that has never been seen active at all; **yellow** for a confirmed client that hasn't been seen active in the last two months (an approximate threshold, not calendar-exact). "Seen active" means different things per client kind, since they authenticate completely differently: a traditional (`client_kind='custom'`) client's last successful signed-message verification, or an ACME account's most recent order (of any status, including a failed/expired one - still evidence the account did something) - an ACME account's own last-connection field is never populated at all, since it authenticates via JWS rather than the traditional protocol's signed messages.
 
@@ -1190,6 +1198,8 @@ Unlike FortiGate ≤7.4, `acme.sh` has native, direct support for RFC 8555 Exter
 
 FortiOS versions before 7.6.3 have no EAB support in their ACME configuration. **Only the contact-token method applies for Variant A on this version range**.
 
+FortiOS splits ACME enrollment across two separate CLI config trees - `config system acme` selects which interface the FortiGate answers ACME challenges on (required once, globally, regardless of how many certificates use ACME afterward), and `config vpn certificate local` is where each individual certificate's enrollment (CA URL, domain, contact email) is actually defined. Both steps below are needed; skipping `config system acme` leaves the FortiGate with no interface to answer the HTTP-01/TLS-ALPN-01 challenge on at all.
+
 ##### Variant A: Pre-confirmed via contact-token trust grant
 
 1. **Admin: create the grant**, scoped to the fqdns pattern this specific FortiGate should ever be allowed to request:
@@ -1198,41 +1208,66 @@ FortiOS versions before 7.6.3 have no EAB support in their ACME configuration. *
    scs-cltmanager acme_create_contact_token_grant --label SOME_HOST_ID --allowed-fqdns "host1.example.com"
    ```
 
-2. **FortiGate: configure the ACME enrollment**, using the exact `provisioning+<token>@...` string the command above printed as the Email field:
+2. **FortiGate: select the challenge-answering interface** (only needed once per device, not per certificate):
 
    ```
-    edit "ACME-TEST"
-        set enroll-protocol acme2
-        set acme-ca-url "https://ca.example.com/acme/directory"
-        set acme-domain "host1.example.com"
-        set acme-email "<code from scs-cltmanager>"
-    next
+   config system acme
+       set interface "wan1"
+   end
+   ```
+
+"wan1" here is the external WAN interface of the firewall, change appropriately for your setup.
+
+
+3. **FortiGate: configure the ACME enrollment**, using the exact `provisioning+<token>@...` string the command above printed as the Email field:
+
+   ```
+   config vpn certificate local
+       edit "ACME-TEST"
+           set enroll-protocol acme2
+           set acme-ca-url "https://ca.example.com/acme/directory"
+           set acme-domain "host1.example.com"
+           set acme-email "<code from scs-cltmanager>"
+       next
+   end
    ```
   **Please note: While sslcrtsrv will happily provide you with multi-domain/wildcard certificates, this way of configuring FortiGate for certificate requests will only allow specific, single host-certificates.**
 
-3. **Verify**: the device's certificate request should complete with no `cltmanager.py acme_confirm`/`assign` step needed at all - confirm via `scs-cltmanager acme_list_trust_grants` that `Uses`/`Last used` incremented, and `scs-crtmanager list --requested` (or `listall`) shows the fqdns already `requested`/approved rather than `unassigned`.
+4. **Verify**: the device's certificate request should complete with no `cltmanager.py acme_confirm`/`assign` step needed at all - confirm via `scs-cltmanager acme_list_trust_grants` that `Uses`/`Last used` incremented, and `scs-crtmanager list --requested` (or `listall`) shows the fqdns already `requested`/approved rather than `unassigned`.
 
 ##### Variant B: On-demand with manual authorization
 
-1. **FortiGate: configure the ACME enrollment**, with a plain, ordinary contact email (no token, no special formatting):
+1. **FortiGate: select the challenge-answering interface** (skip if already done for another certificate on this device):
 
    ```
-    edit "ACME-TEST"
-        set enroll-protocol acme2
-        set acme-ca-url "https://ca.example.com/acme/directory"
-        set acme-domain "host1.example.com"
-        set acme-email "<some email address, not checked>"
-    next
+   config system acme
+       set interface "wan1"
+   end
    ```
 
-2. **Admin: confirm and approve**, once, the same as any other new ACME client (Section 9.10):
+"wan1" here is the external WAN interface of the firewall, change appropriately for your setup.
+
+2. **FortiGate: configure the ACME enrollment**, with a plain, ordinary contact email (no token, no special formatting):
+
+   ```
+   config vpn certificate local
+       edit "ACME-TEST"
+           set enroll-protocol acme2
+           set acme-ca-url "https://ca.example.com/acme/directory"
+           set acme-domain "host1.example.com"
+           set acme-email "<some email address, not checked>"
+       next
+   end
+   ```
+
+3. **Admin: confirm and approve**, once, the same as any other new ACME client (Section 9.10):
 
    ```
    sudo scs-cltmanager acme_confirm <client-id>
    sudo scs-cltmanager assign <client-id> <fqdns>
    ```
 
-3. **Verify**: the FortiGate's next `finalize`/renewal attempt succeeds once `crtrequest.py`'s next scheduled pass (Section 9.3) picks up the now-approved order.
+4. **Verify**: the FortiGate's next `finalize`/renewal attempt succeeds once `crtrequest.py`'s next scheduled pass (Section 9.3) picks up the now-approved order.
 
 ---
 

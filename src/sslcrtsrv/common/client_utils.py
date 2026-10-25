@@ -19,7 +19,7 @@ from .crypto_utils import (
     generate_key_pair, save_keys, load_private_key, load_public_key,
     load_private_key_from_string, load_public_key_from_string,
     sign_message, verify_signature, get_public_key_fingerprint,
-    compute_registration_proof
+    compute_registration_proof, validate_certificate_bundle
 )
 from .network_utils import send_secure_message, receive_secure_message
 from .message_utils import (
@@ -643,6 +643,17 @@ class Client:
                                   f"not older than the retrieved one - not overwriting.")
                             cert_data['certificate_replaced'] = False
                             return response
+
+                        # Validate the retrieved bundle before writing anything -
+                        # integrity, key/cert match, and intermediate chain - so a
+                        # corrupted or inconsistent server response never overwrites
+                        # a working certificate on disk.
+                        bundle_ok, bundle_error = validate_certificate_bundle(
+                            key_pem=cert_data.get("key"), cert_pem=cert_data.get("cert"),
+                            intermediate_pem=cert_data.get("intermediate"))
+                        if not bundle_ok:
+                            print(f"Refusing to write retrieved certificate files: {bundle_error}")
+                            return None
 
                         # Save key if path provided
                         if key_path and cert_data.get("key"):

@@ -2,6 +2,7 @@
 
 import os
 import json
+from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.backends import default_backend
@@ -225,3 +226,60 @@ def decrypt_data(encrypted_data, private_key):
     except Exception as e:
         print(f"Error decrypting data: {e}")
         return None
+
+
+def _public_keys_match(key_a, key_b):
+    """True if two public keys are the same key - direct equality first,
+    falling back to comparing public_numbers() (RSA/EC/DSA all expose it)."""
+    if key_a == key_b:
+        return True
+    if hasattr(key_a, 'public_numbers') and hasattr(key_b, 'public_numbers'):
+        try:
+            return key_a.public_numbers() == key_b.public_numbers()
+        except Exception:
+            return False
+    return False
+
+
+def validate_certificate_bundle(key_pem=None, cert_pem=None, intermediate_pem=None):
+    """Validates a downloaded key/cert/intermediate PEM bundle before it's written to disk:
+    each piece present parses as valid data, the certificate's public key matches the private
+    key (if both given), and the intermediate(s) correctly chain to the certificate (if both
+    given). A piece not provided is simply not checked. Returns (True, None) if everything
+    present is internally consistent, otherwise (False, "reason")."""
+    cert = None
+    if cert_pem:
+        try:
+            cert = x509.load_pem_x509_certificate(cert_pem.encode())
+        except Exception as e:
+            return False, f"Certificate is not valid PEM/X.509 data: {e}"
+
+    private_key = None
+    if key_pem:
+        try:
+            private_key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        except Exception as e:
+            return False, f"Private key is not valid PEM data: {e}"
+
+    if cert is not None and private_key is not None:
+        if not _public_keys_match(private_key.public_key(), cert.public_key()):
+            return False, "Certificate does not match the private key"
+
+    if cert is not None and intermediate_pem:
+        try:
+            intermediates = x509.load_pem_x509_certificates(intermediate_pem.encode())
+        except Exception as e:
+            return False, f"Intermediate certificate(s) are not valid PEM/X.509 data: {e}"
+        if not intermediates:
+            return False, "No intermediate certificates found"
+        try:
+            cert.verify_directly_issued_by(intermediates[0])
+        except Exception as e:
+            return False, f"Intermediate certificate does not correctly chain to the certificate: {e}"
+        for i in range(len(intermediates) - 1):
+            try:
+                intermediates[i].verify_directly_issued_by(intermediates[i + 1])
+            except Exception as e:
+                return False, f"Intermediate chain is broken at certificate {i + 2}: {e}"
+
+    return True, None

@@ -26,6 +26,11 @@ DataTable {
     padding-top: 1;
 }
 
+.search-input {
+    width: 1fr;
+    margin-right: 1;
+}
+
 .health-block {
     border: round $primary;
     padding: 1 2;

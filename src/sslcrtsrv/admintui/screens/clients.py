@@ -1,12 +1,13 @@
 import json
 from datetime import datetime, timedelta, timezone
+from time import monotonic
 from rich.text import Text
 from textual import on, work
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, Label, Static
+from textual.widgets import Button, DataTable, Input, Label, Static
 
 from ...common.database import (
     get_all_clients, get_all_client_certificate_relations_with_certs, permission_is_active,
@@ -20,7 +21,10 @@ from ... import cltmanager
 from ... import crtmanager
 from ..util.capture import silence_stdout
 from ..util.notify import notify_safe
-from ..util.table import current_row_key, restore_row_cursor
+from ..util.table import (
+    current_row_key, restore_row_cursor, should_debounce_header_click, sort_text_key, sort_version_key,
+    toggle_sort_state,
+)
 from ..widgets.clickable_table import ClickableDataTable
 from ..widgets.confirm_modal import ConfirmModal
 from ..widgets.forms import AssignPermissionModal, SetPermissionExpiryModal
@@ -71,23 +75,61 @@ class ClientsView(Vertical):
         Binding("R", "revoke_selected", "Revoke"),
         Binding("d", "delete_selected", "Delete"),
         Binding("enter", "view_selected", "Permissions", show=False),
+        Binding("ctrl+f", "focus_search", "Find"),
     ]
 
     filter_mode = reactive("all")
+    search_text = reactive("")
+
+    # Click a header to sort by it (ascending), click again for descending -
+    # the other columns (DB ID, Status, Last IP, Valid/Invalid/Requested)
+    # aren't sortable. Keys match the column labels added in compose() below,
+    # since add_columns() defaults a column's key to its label when none is
+    # given explicitly.
+    SORTABLE_COLUMNS = {
+        "Client ID": sort_text_key,
+        "Type": sort_text_key,
+        "Version": sort_version_key,
+        "Last connection": sort_text_key,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sort_column = None
+        self._sort_reverse = False
+        self._last_header_click_column = None
+        self._last_header_click_time = None
 
     def compose(self):
         with Horizontal(classes="form-actions"):
+            yield Input(placeholder="Filter by Client ID...", id="clients-search", classes="search-input")
             yield Button("All", id="filter-all", variant="primary")
             yield Button("Pending", id="filter-pending")
             yield Button("Confirmed", id="filter-confirmed")
         table = ClickableDataTable(id="clients-table")
         table.cursor_type = "row"
-        table.add_columns("DB ID", "Client ID", "Type", "Status", "Version", "Last connection", "Last IP",
-                           "Valid", "Invalid", "Requested")
+        labels = ("DB ID", "Client ID", "Type", "Status", "Version", "Last connection", "Last IP",
+                  "Valid", "Invalid", "Requested")
+        # add_columns() auto-generates an opaque ColumnKey per column, unrelated
+        # to its label text - captured here (by label) so HeaderSelected/
+        # _apply_sort() below can always look a column up by the actual key
+        # DataTable itself uses, rather than assuming a column's key equals
+        # its label (version-fragile: DataTable.columns is keyed by ColumnKey,
+        # and relying on a plain str to compare equal to one isn't guaranteed
+        # across Textual versions - confirmed to vary in practice).
+        self._column_keys = dict(zip(labels, table.add_columns(*labels)))
         yield table
         yield Static("", id="clients-empty", classes="empty-state")
 
     def on_mount(self):
+        self.refresh_data()
+
+    def action_focus_search(self) -> None:
+        self.query_one("#clients-search", Input).focus()
+
+    @on(Input.Changed, "#clients-search")
+    def _on_search_changed(self, event: Input.Changed) -> None:
+        self.search_text = event.value
         self.refresh_data()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -111,13 +153,16 @@ class ClientsView(Vertical):
         elif self.filter_mode == "confirmed":
             clients = [c for c in clients if c.status == "confirmed"]
 
+        if self.search_text:
+            clients = [c for c in clients if self.search_text.lower() in c.client_id.lower()]
+
         empty = self.query_one("#clients-empty", Static)
         empty.update("No clients match this filter." if not clients else "")
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         for client in clients:
-            last_success = client.last_successful_connection.strftime('%Y-%m-%d %H:%M') \
-                if client.last_successful_connection else "N/A"
+            last_seen = _last_seen(client, latest_acme_orders)
+            last_success = last_seen.strftime('%Y-%m-%d %H:%M') if last_seen else "N/A"
             counts = cert_counts.get(client.id, {'valid': 0, 'invalid': 0, 'requested': 0})
             client_type = "ACME" if client.client_kind == 'acme' else "Custom"
             cells = [str(client.id), client.client_id, client_type, client.status,
@@ -129,7 +174,6 @@ class ClientsView(Vertical):
             # Yellow: confirmed and has been seen, but not recently. Checked
             # in this order so an unconfirmed-and-stale client shows red
             # (the stronger signal), not yellow.
-            last_seen = _last_seen(client, latest_acme_orders)
             if client.status != 'confirmed' or last_seen is None:
                 cells = [Text(c, style="red") for c in cells]
             elif now - last_seen > STALE_CONNECTION_THRESHOLD:
@@ -138,6 +182,43 @@ class ClientsView(Vertical):
             table.add_row(*cells, key=client.client_id)
 
         restore_row_cursor(table, previous_key)
+        self._apply_sort(table)
+
+    @on(DataTable.HeaderSelected)
+    def _on_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        label = next((lbl for lbl, key in self._column_keys.items() if key == event.column_key), None)
+        if label not in self.SORTABLE_COLUMNS:
+            return
+        now = monotonic()
+        if should_debounce_header_click(self._last_header_click_column, self._last_header_click_time,
+                                         label, now):
+            return
+        self._last_header_click_column, self._last_header_click_time = label, now
+        self._sort_column, self._sort_reverse = toggle_sort_state(
+            self._sort_column, self._sort_reverse, label)
+        self._apply_sort(event.data_table)
+
+    def _apply_sort(self, table):
+        """Re-applies the current sort (if any) - called both right after a
+        header click and at the end of every refresh_data(), since
+        table.clear() discards any prior ordering just like it discards the
+        cursor position (see restore_row_cursor() above). Also redraws every
+        sortable column's header with a ▲/▼ indicator on whichever one is
+        currently active, clearing it from the rest. Always goes through
+        self._column_keys (the actual ColumnKey objects add_columns()
+        returned) rather than a column's label string - see compose()'s
+        comment for why."""
+        for label in self.SORTABLE_COLUMNS:
+            if label == self._sort_column:
+                arrow = " ▼" if self._sort_reverse else " ▲"
+            else:
+                arrow = ""
+            table.columns[self._column_keys[label]].label = Text(label + arrow)
+        if self._sort_column is None:
+            return
+        table.sort(self._column_keys[self._sort_column], key=self.SORTABLE_COLUMNS[self._sort_column],
+                   reverse=self._sort_reverse)
+        table.refresh()
 
     def _selected_client_id(self):
         return current_row_key(self.query_one("#clients-table", DataTable))
